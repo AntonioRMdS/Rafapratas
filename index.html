@@ -269,13 +269,14 @@ input:focus,select:focus{outline:2px solid var(--green);outline-offset:-1px}
 <div class="mo" id="mo-venda">
   <div class="mi">
     <div class="mh"></div>
-    <div class="mt">Registrar venda</div>
+    <div class="mt" id="v-title">Registrar venda</div>
     <div class="fr"><label class="fl">Cliente</label><input id="v-cl" placeholder="Nome do cliente" autocomplete="off"></div>
-    <div class="fr"><label class="fl">Selecione a peça do estoque</label><div id="psel"></div></div>
+    <div class="fr"><label class="fl">Item vendido</label><input id="v-item" placeholder="Ex: Anel solitário 18mm" autocomplete="off"></div>
+    <div class="fr"><label class="fl">Vincular ao estoque (opcional)</label><div id="psel"></div></div>
     <div class="fr"><label class="fl">Valor cobrado (R$)</label><input id="v-vl" type="number" inputmode="decimal" placeholder="0,00" step="0.01"></div>
     <div class="fr"><label class="fl">Forma de pagamento</label><select id="v-fm"><option>À vista</option><option>PIX</option><option>Cartão crédito</option><option>Cartão débito</option></select></div>
     <div id="v-av" style="display:none;padding:8px 10px;background:var(--al);border-radius:var(--r);font-size:12px;color:var(--amber);margin-top:4px"></div>
-    <button class="bp3" onclick="salvarVenda()">Salvar e baixar estoque</button>
+    <button class="bp3" id="v-btn" onclick="salvarVenda()">Salvar e baixar estoque</button>
     <button class="bc" onclick="fecharModal('venda')">Cancelar</button>
   </div>
 </div>
@@ -352,6 +353,50 @@ input:focus,select:focus{outline:2px solid var(--green);outline-offset:-1px}
   </div>
 </div>
 
+<!-- MODAL EDITAR COBRANÇA -->
+<div class="mo" id="mo-editcob">
+  <div class="mi">
+    <div class="mh"></div>
+    <div class="mt">Editar cobrança</div>
+    <input type="hidden" id="ec-idx">
+    <div class="fr"><label class="fl">Cliente</label><input id="ec-cl" placeholder="Nome do cliente" autocomplete="off"></div>
+    <div class="fr"><label class="fl">Peça vendida</label><input id="ec-pc" placeholder="Ex: Anel solitário" autocomplete="off"></div>
+    <div class="fr"><label class="fl">Valor total (R$)</label><input id="ec-vl" type="number" inputmode="decimal" placeholder="0,00" step="0.01"></div>
+    <div class="fr2">
+      <div><label class="fl">Nº parcelas</label><input id="ec-nr" type="number" inputmode="numeric" placeholder="3" min="1"></div>
+      <div><label class="fl">Já pagas</label><input id="ec-pg" type="number" inputmode="numeric" placeholder="0" min="0"></div>
+    </div>
+    <div class="fr"><label class="fl">Data da 1ª parcela</label><input id="ec-dt" type="date"></div>
+    <button class="bp3" onclick="salvarEditCob()">Salvar alterações</button>
+    <button class="bd" onclick="excluirCob()">Excluir cobrança</button>
+    <button class="bc" onclick="fecharModal('editcob')">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PEÇA -->
+<div class="mo" id="mo-editpeca">
+  <div class="mi">
+    <div class="mh"></div>
+    <div class="mt">Editar peça</div>
+    <input type="hidden" id="ep-idx">
+    <div class="fr"><label class="fl">Nome da peça</label><input id="ep-nm" placeholder="Ex: Pulseira veneziana" autocomplete="off"></div>
+    <div class="fr2">
+      <div><label class="fl">Quantidade</label><input id="ep-qt" type="number" inputmode="numeric" placeholder="1" min="0"></div>
+      <div><label class="fl">Estoque mínimo</label><input id="ep-mn" type="number" inputmode="numeric" placeholder="2" min="0"></div>
+    </div>
+    <div class="fr2">
+      <div><label class="fl">Preço de custo</label><input id="ep-cs" type="number" inputmode="decimal" placeholder="0,00" step="0.01"></div>
+      <div><label class="fl">Preço de venda</label><input id="ep-vd" type="number" inputmode="decimal" placeholder="0,00" step="0.01"></div>
+    </div>
+    <div class="fr"><label class="fl">Tipo</label>
+      <select id="ep-ic"><option value="💍">💍 Anel</option><option value="📿">📿 Colar</option><option value="✨">✨ Pulseira</option><option value="👂">👂 Brinco</option><option value="⌚">⌚ Tornozeleira</option><option value="🔮">🔮 Pingente</option><option value="🌟">🌟 Outro</option></select>
+    </div>
+    <button class="bp3" onclick="salvarEditPeca()">Salvar alterações</button>
+    <button class="bd" onclick="excluirPeca()">Excluir peça</button>
+    <button class="bc" onclick="fecharModal('editpeca')">Cancelar</button>
+  </div>
+</div>
+
 <!-- MODAL RESET -->
 <div class="mo" id="mo-reset">
   <div class="mi">
@@ -380,7 +425,7 @@ function iget(store,key){return new Promise((res,rej)=>{const r=idb.transaction(
 function iset(store,key,val){return new Promise((res,rej)=>{const r=idb.transaction(store,'readwrite').objectStore(store).put(val,key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
 
 // ── State ─────────────────────────────────────────────
-let DB={vendas:[],cobrancas:[],pecas:[]},USERS=[],CU=null,selPeca=null,saveT=null,dP=null;
+let DB={vendas:[],cobrancas:[],pecas:[]},USERS=[],CU=null,selPeca=null,saveT=null,dP=null,editVendaIdx=null;
 
 function defDB(){return{vendas:[{cliente:"Ana Lima",peca:"Anel solitário",pecaIdx:0,valor:320,forma:"PIX",data:"24/03/2026"},{cliente:"Carla Souza",peca:"Colar coração",pecaIdx:1,valor:180,forma:"À vista",data:"22/03/2026"}],cobrancas:[{cliente:"Beatriz Melo",peca:"Pulseira veneziana",valor:450,parcelas:3,pagas:1,dataInicio:"2026-03-01"},{cliente:"Fernanda Costa",peca:"Brinco argola",valor:900,parcelas:6,pagas:3,dataInicio:"2026-01-15"}],pecas:[{nome:"Anel solitário",qtd:4,min:2,custo:80,venda:320,icon:"💍"},{nome:"Colar coração",qtd:2,min:2,custo:50,venda:180,icon:"📿"},{nome:"Pulseira veneziana",qtd:8,min:3,custo:35,venda:140,icon:"✨"},{nome:"Brinco argola",qtd:5,min:2,custo:25,venda:90,icon:"👂"}]};}
 function defUsers(){return[{nome:"Admin",user:"admin",pass:"admin123",role:"admin"}];}
@@ -457,7 +502,7 @@ function renderAll(){
 
   const lv=document.getElementById('lv');
   if(!DB.vendas.length)lv.innerHTML='<div class="empty">Nenhuma venda registrada.</div>';
-  else{lv.innerHTML='';DB.vendas.forEach(v=>{lv.innerHTML+=`<div class="card"><div class="cr"><div style="flex:1;min-width:0"><div class="ct" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.cliente}</div><div class="csb">${v.peca} · ${v.data}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:15px;font-weight:600;color:var(--gd)">${fmt(v.valor)}</div><span class="badge bb2" style="display:inline-block;margin-top:3px">${v.forma}</span></div></div></div>`;});}
+  else{lv.innerHTML='';DB.vendas.forEach((v,i)=>{const desc=v.item||v.peca||'';lv.innerHTML+=`<div class="card"><div class="cr"><div style="flex:1;min-width:0"><div class="ct" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v.cliente}</div><div class="csb">${desc?desc+' · ':''}${v.data}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:15px;font-weight:600;color:var(--gd)">${fmt(v.valor)}</div><span class="badge bb2" style="display:inline-block;margin-top:3px">${v.forma}</span>${canEdit()?`<br><button class="sbtn" style="margin-top:5px" onclick="abrirEditVenda(${i})">✏ Editar</button>`:''}</div></div></div>`;});}
 
   const lc=document.getElementById('lc');
   if(!DB.cobrancas.length)lc.innerHTML='<div class="empty">Nenhuma cobrança ativa.</div>';
@@ -466,12 +511,12 @@ function renderAll(){
     const prox=pVenc(c);let vh='';
     if(prox&&!q){const d=dV(prox),ds=prox.toLocaleDateString('pt-BR');if(d<0)vh=`<div class="vi" style="color:var(--red);background:var(--rl)">Parcela ${c.pagas+1} atrasada ${Math.abs(d)} dia(s) — venceu em ${ds}</div>`;else if(d===0)vh=`<div class="vi" style="color:var(--amber)">Parcela ${c.pagas+1} vence hoje</div>`;else if(d<=5)vh=`<div class="vi" style="color:var(--amber)">Parcela ${c.pagas+1} vence em ${d} dia(s) — ${ds}</div>`;else vh=`<div class="vi">Próx. parcela (${c.pagas+1}): ${ds}</div>`;}
     const sb=q?`<span class="badge bg2">Quitado</span>`:`<span class="badge ${prox&&dV(prox)<0?'br2':(prox&&dV(prox)<=5?'ba2':'bb2')}">${c.pagas}/${c.parcelas} pagas</span>`;
-    lc.innerHTML+=`<div class="card"><div class="cr"><div style="flex:1;min-width:0"><div class="ct">${c.cliente}</div><div class="csb">${c.peca||''} · ${fmt(c.valor/c.parcelas)}/parcela</div></div>${sb}</div><div class="pbar"><div class="pf" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:12px;color:var(--tx2)">Restante: <b>${fmt(rest)}</b></span>${!q&&canEdit()?`<button class="sbtn" onclick="pagarParc(${i})">+ Pagar parcela</button>`:''}</div>${vh}</div>`;
+    lc.innerHTML+=`<div class="card"><div class="cr"><div style="flex:1;min-width:0"><div class="ct">${c.cliente}</div><div class="csb">${c.peca||''} · ${fmt(c.valor/c.parcelas)}/parcela</div></div><div style="text-align:right">${sb}${canEdit()?`<br><button class="sbtn" style="margin-top:5px" onclick="abrirEditCob(${i})">✏ Editar</button>`:''}</div></div><div class="pbar"><div class="pf" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px"><span style="font-size:12px;color:var(--tx2)">Restante: <b>${fmt(rest)}</b></span>${!q&&canEdit()?`<button class="sbtn" onclick="pagarParc(${i})">+ Pagar parcela</button>`:''}</div>${vh}</div>`;
   });}
 
   const ge=document.getElementById('ge');
   if(!DB.pecas.length)ge.innerHTML='<div class="empty" style="grid-column:span 2">Nenhuma peça cadastrada.</div>';
-  else{ge.innerHTML='';DB.pecas.forEach(p=>{const lw=p.qtd<=p.min;ge.innerHTML+=`<div class="pc${lw?' low':''}"><div class="pi">${p.icon}</div><div class="pn">${p.nome}</div><div style="margin-top:4px"><span class="badge ${p.qtd===0?'br2':(lw?'ba2':'bg2')}">${p.qtd} un</span></div><div class="pp2">${fmt(p.venda)}</div></div>`;});}
+  else{ge.innerHTML='';DB.pecas.forEach((p,i)=>{const lw=p.qtd<=p.min;ge.innerHTML+=`<div class="pc${lw?' low':''}"><div class="pi">${p.icon}</div><div class="pn">${p.nome}</div><div style="margin-top:4px"><span class="badge ${p.qtd===0?'br2':(lw?'ba2':'bg2')}">${p.qtd} un</span></div><div class="pp2">${fmt(p.venda)}</div>${canEdit()?`<button class="sbtn" style="margin-top:8px;width:100%" onclick="abrirEditPeca(${i})">✏ Editar</button>`:''}</div>`;});}
 
   document.getElementById('tbp').innerHTML='';
   DB.pecas.forEach(p=>{const m=p.custo>0?Math.round((p.venda-p.custo)/p.custo*100):0;document.getElementById('tbp').innerHTML+=`<tr><td title="${p.nome}">${p.icon} ${p.nome}</td><td>${fmt(p.custo)}</td><td style="font-weight:600;color:var(--gd)">${fmt(p.venda)}</td><td><span class="badge bg2">+${m}%</span></td></tr>`;});
@@ -484,7 +529,10 @@ function abrirModal(t){
   if((t==='venda'||t==='cob'||t==='peca')&&!canEdit())return;
   if((t==='nuser'||t==='reset')&&!isAdm())return;
   if(t==='venda'){
-    selPeca=null;document.getElementById('v-cl').value='';document.getElementById('v-vl').value='';document.getElementById('v-av').style.display='none';
+    editVendaIdx=null;
+    document.getElementById('v-title').textContent='Registrar venda';
+    document.getElementById('v-btn').textContent='Salvar e baixar estoque';
+    selPeca=null;document.getElementById('v-cl').value='';document.getElementById('v-item').value='';document.getElementById('v-vl').value='';document.getElementById('v-av').style.display='none';
     const s=document.getElementById('psel');s.innerHTML='';
     if(!DB.pecas.length)s.innerHTML='<p style="font-size:12px;color:var(--tx2)">Nenhuma peça no estoque.</p>';
     else DB.pecas.forEach((p,i)=>{const d=document.createElement('div');d.className='psi';d.innerHTML=`<span>${p.icon} ${p.nome}</span><span style="font-size:12px;color:var(--tx2)">${p.qtd} un · ${fmt(p.venda)}</span>`;d.onclick=()=>{document.querySelectorAll('.psi').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');selPeca=i;document.getElementById('v-vl').value=p.venda;const av=document.getElementById('v-av');if(p.qtd===0){av.style.display='block';av.textContent='Atenção: sem estoque!';}else if(p.qtd===1){av.style.display='block';av.textContent='Atenção: último item!';}else av.style.display='none';};s.appendChild(d);});
@@ -500,10 +548,19 @@ function fecharModal(t){document.getElementById('mo-'+t).classList.remove('open'
 document.querySelectorAll('.mo').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open');}));
 
 function salvarVenda(){
-  const cl=document.getElementById('v-cl').value.trim()||'Cliente',vl=parseFloat(document.getElementById('v-vl').value)||0,fm=document.getElementById('v-fm').value;
-  let pn='Peça avulsa';if(selPeca!==null){const p=DB.pecas[selPeca];pn=p.nome;if(p.qtd>0)p.qtd--;}
-  const h=new Date(),data=h.getDate().toString().padStart(2,'0')+'/'+(h.getMonth()+1).toString().padStart(2,'0')+'/'+h.getFullYear();
-  DB.vendas.unshift({cliente:cl,peca:pn,pecaIdx:selPeca,valor:vl,forma:fm,data,por:CU.user});
+  const cl=document.getElementById('v-cl').value.trim()||'Cliente';
+  const item=document.getElementById('v-item').value.trim();
+  const vl=parseFloat(document.getElementById('v-vl').value)||0;
+  const fm=document.getElementById('v-fm').value;
+  let pn=item||'Peça avulsa';
+  if(editVendaIdx!==null){
+    DB.vendas[editVendaIdx]={...DB.vendas[editVendaIdx],cliente:cl,item:item,peca:pn,valor:vl,forma:fm};
+    editVendaIdx=null;
+  } else {
+    if(selPeca!==null){const p=DB.pecas[selPeca];if(!item)pn=p.nome;if(p.qtd>0)p.qtd--;}
+    const h=new Date(),data=h.getDate().toString().padStart(2,'0')+'/'+(h.getMonth()+1).toString().padStart(2,'0')+'/'+h.getFullYear();
+    DB.vendas.unshift({cliente:cl,item:item,peca:pn,pecaIdx:selPeca,valor:vl,forma:fm,data,por:CU.user});
+  }
   fecharModal('venda');renderAll();saveDB();
 }
 function salvarCob(){
@@ -517,6 +574,90 @@ function salvarPeca(){
   fecharModal('peca');renderAll();saveDB();
 }
 function pagarParc(i){if(DB.cobrancas[i].pagas<DB.cobrancas[i].parcelas){DB.cobrancas[i].pagas++;renderAll();saveDB();}}
+
+function abrirEditVenda(i){
+  if(!canEdit())return;
+  const v=DB.vendas[i];
+  editVendaIdx=i;
+  document.getElementById('v-title').textContent='Editar venda';
+  document.getElementById('v-btn').textContent='Salvar alterações';
+  document.getElementById('v-cl').value=v.cliente||'';
+  document.getElementById('v-item').value=v.item||v.peca||'';
+  document.getElementById('v-vl').value=v.valor||'';
+  document.getElementById('v-av').style.display='none';
+  const fm=document.getElementById('v-fm');
+  for(let o of fm.options){if(o.value===v.forma||o.text===v.forma)o.selected=true;}
+  selPeca=null;
+  const s=document.getElementById('psel');s.innerHTML='<p style="font-size:11px;color:var(--tx3)">Revinculação ao estoque não disponível na edição.</p>';
+  document.getElementById('mo-venda').classList.add('open');
+}
+function excluirVenda(i){
+  if(!canEdit())return;
+  if(!confirm('Excluir esta venda?'))return;
+  DB.vendas.splice(i,1);
+  fecharModal('venda');renderAll();saveDB();
+}
+
+function abrirEditCob(i){
+  if(!canEdit())return;
+  const c=DB.cobrancas[i];
+  document.getElementById('ec-idx').value=i;
+  document.getElementById('ec-cl').value=c.cliente||'';
+  document.getElementById('ec-pc').value=c.peca||'';
+  document.getElementById('ec-vl').value=c.valor||'';
+  document.getElementById('ec-nr').value=c.parcelas||'';
+  document.getElementById('ec-pg').value=c.pagas||0;
+  document.getElementById('ec-dt').value=c.dataInicio||'';
+  document.getElementById('mo-editcob').classList.add('open');
+}
+function salvarEditCob(){
+  const i=parseInt(document.getElementById('ec-idx').value);
+  DB.cobrancas[i]={
+    cliente:document.getElementById('ec-cl').value.trim()||'Cliente',
+    peca:document.getElementById('ec-pc').value.trim(),
+    valor:parseFloat(document.getElementById('ec-vl').value)||0,
+    parcelas:parseInt(document.getElementById('ec-nr').value)||1,
+    pagas:parseInt(document.getElementById('ec-pg').value)||0,
+    dataInicio:document.getElementById('ec-dt').value
+  };
+  fecharModal('editcob');renderAll();saveDB();
+}
+function excluirCob(){
+  const i=parseInt(document.getElementById('ec-idx').value);
+  if(!confirm('Excluir esta cobrança?'))return;
+  DB.cobrancas.splice(i,1);fecharModal('editcob');renderAll();saveDB();
+}
+
+function abrirEditPeca(i){
+  if(!canEdit())return;
+  const p=DB.pecas[i];
+  document.getElementById('ep-idx').value=i;
+  document.getElementById('ep-nm').value=p.nome||'';
+  document.getElementById('ep-qt').value=p.qtd||0;
+  document.getElementById('ep-mn').value=p.min||2;
+  document.getElementById('ep-cs').value=p.custo||'';
+  document.getElementById('ep-vd').value=p.venda||'';
+  const ic=document.getElementById('ep-ic');
+  for(let o of ic.options){if(o.value===p.icon)o.selected=true;}
+  document.getElementById('mo-editpeca').classList.add('open');
+}
+function salvarEditPeca(){
+  const i=parseInt(document.getElementById('ep-idx').value);
+  DB.pecas[i]={
+    nome:document.getElementById('ep-nm').value.trim()||'Peça',
+    qtd:parseInt(document.getElementById('ep-qt').value)||0,
+    min:parseInt(document.getElementById('ep-mn').value)||2,
+    custo:parseFloat(document.getElementById('ep-cs').value)||0,
+    venda:parseFloat(document.getElementById('ep-vd').value)||0,
+    icon:document.getElementById('ep-ic').value
+  };
+  fecharModal('editpeca');renderAll();saveDB();
+}
+function excluirPeca(){
+  const i=parseInt(document.getElementById('ep-idx').value);
+  if(!confirm('Excluir esta peça?'))return;
+  DB.pecas.splice(i,1);fecharModal('editpeca');renderAll();saveDB();
+}
 
 function renderUsers(){
   const l=document.getElementById('lu');l.innerHTML='';
